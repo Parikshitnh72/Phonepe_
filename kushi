@@ -1,0 +1,782 @@
+import os
+import json
+import requests
+import subprocess
+import pandas as pd
+import mysql.connector
+import streamlit as st
+from streamlit_option_menu import option_menu
+import plotly.express as px
+import requests
+from PIL import Image
+from streamlit_extras.add_vertical_space import add_vertical_space
+from sqlalchemy import create_engine
+import chardet
+
+url = 'https://api.github.com/repos/PhonePe/pulse'
+response = requests.get(url)
+
+if response.status_code == 200:
+    repo = response.json()
+    clone_url = repo['clone_url']
+    print(f"Clone URL: {clone_url}")
+else:
+    print(f"Error: {response.status_code}")
+
+repo_name = "pulse"
+clone_dir = os.path.join(os.getcwd(), repo_name)
+
+
+path1 = r"C:\Users\user\pulse\data\aggregated\transaction\country\india\state"
+Agg_state_list = os.listdir(path1)
+
+col1 = {'State': [], 'Year': [], 'Quarter': [], 'Transaction_type': [], 'Transaction_count': [], 'Transaction_amount': []}
+
+for i in Agg_state_list:
+    p_i = path1 +"/" + i
+    Agg_yr = os.listdir(p_i)
+
+    for j in Agg_yr:
+        p_j = p_i + "/" + j
+        Agg_yr_list = os.listdir(p_j)
+
+        for k in Agg_yr_list:
+            p_k = p_j +"/"+k
+            # print(p_k)
+            Data = open(p_k, 'r')
+            A = json.load(Data)
+            for z in A['data']['transactionData']:
+                Name = z['name']
+                count = z['paymentInstruments'][0]['count']
+                amount = z['paymentInstruments'][0]['amount']
+                col1['Transaction_type'].append(Name)
+                col1['Transaction_count'].append(count)
+                col1['Transaction_amount'].append(amount)
+                col1['State'].append(i)
+                col1['Year'].append(j)
+                col1['Quarter'].append(int(k.strip('.json')))
+df_aggregated_transaction = pd.DataFrame(col1)
+
+path2 = r"C:\Users\user\pulse\data\aggregated\user\country\india\state"
+user_list = os.listdir(path2)
+col2 = {'State': [], 'Year': [], 'Quarter': [], 'brands': [], 'Count': [],
+        'Percentage': []}
+for i in user_list:
+    p_i = path2 + "/" + i
+    Agg_yr = os.listdir(p_i)
+    for j in Agg_yr:
+        p_j = p_i + "/" + j
+        Agg_yr_list = os.listdir(p_j)
+
+        for k in Agg_yr_list:
+            p_k = p_j + "/"+ k
+            # print(p_k)
+            Data = open(p_k, 'r')
+            B = json.load(Data)
+            try:
+                for w in B["data"]["usersByDevice"]:
+                    brand_name = w["brand"]
+                    count_ = w["count"]
+                    ALL_percentage = w["percentage"]
+                    col2["brands"].append(brand_name)
+                    col2["Count"].append(count_)
+                    col2["Percentage"].append(ALL_percentage)
+                    col2["State"].append(i)
+                    col2["Year"].append(j)
+                    col2["Quarter"].append(int(k.strip('.json')))
+            except:
+                pass
+df_aggregated_user = pd.DataFrame(col2)
+
+path3 = r"C:\Users\user\pulse\data\map\transaction\hover\country\india\state"
+hover_list = os.listdir(path3)
+
+col3 = {'State': [], 'Year': [], 'Quarter': [], 'District': [], 'count': [],
+        'amount': []}
+for i in hover_list:
+    p_i = path3 + "/" + i
+    Agg_yr = os.listdir(p_i)
+
+    for j in Agg_yr:
+        p_j = p_i + "/" + j
+        Agg_yr_list = os.listdir(p_j)
+
+        for k in Agg_yr_list:
+            p_k = p_j + "/" + k
+            # print(p_k)
+            Data = open(p_k, 'r')
+            C = json.load(Data)
+            for x in C["data"]["hoverDataList"]:
+                District = x["name"]
+                count = x["metric"][0]["count"]
+                amount = x["metric"][0]["amount"]
+                col3["District"].append(District)
+                col3["count"].append(count)
+                col3["amount"].append(amount)
+                col3['State'].append(i)
+                col3['Year'].append(j)
+                col3['Quarter'].append(int(k.strip('.json')))
+df_map_transaction = pd.DataFrame(col3)
+
+path4 = r"C:\Users\user\pulse\data\map\user\hover\country\india\state"
+map_list = os.listdir(path4)
+
+col4 = {"State": [], "Year": [], "Quarter": [], "District": [],
+        "RegisteredUser": []}
+for i in map_list:
+    p_i = path4 + "/" + i
+    Agg_yr = os.listdir(p_i)
+
+    for j in Agg_yr:
+        p_j = p_i  + "/" + j
+        Agg_yr_list = os.listdir(p_j)
+
+        for k in Agg_yr_list:
+            p_k = p_j + "/" + k
+            # print(p_k)
+            Data = open(p_k, 'r')
+            D = json.load(Data)
+
+            for u in D["data"]["hoverData"].items():
+                district = u[0]
+                registereduser = u[1]["registeredUsers"]
+                col4["District"].append(district)
+                col4["RegisteredUser"].append(registereduser)
+                col4['State'].append(i)
+                col4['Year'].append(j)
+                col4['Quarter'].append(int(k.strip('.json')))
+df_map_user = pd.DataFrame(col4)
+
+path5 = r"C:\Users\user\pulse\data\top\transaction\country\india\state"
+TOP_list = os.listdir(path5)
+
+col5 = {'State': [], 'Year': [], 'Quarter': [], 'District': [], 'Transaction_count': [],
+        'Transaction_amount': []}
+for i in TOP_list:
+    p_i = path5 +"/" + i
+    Agg_yr = os.listdir(p_i)
+
+    for j in Agg_yr:
+        p_j = p_i + "/" + j
+        Agg_yr_list = os.listdir(p_j)
+
+        for k in Agg_yr_list:
+            p_k = p_j +"/" + k
+            # print(p_k)
+            Data = open(p_k, 'r')
+            E = json.load(Data)
+            for z in E['data']['pincodes']:
+                Name = z['entityName']
+                count = z['metric']['count']
+                amount = z['metric']['amount']
+                col5['District'].append(Name)
+                col5['Transaction_count'].append(count)
+                col5['Transaction_amount'].append(amount)
+                col5['State'].append(i)
+                col5['Year'].append(j)
+                col5['Quarter'].append(int(k.strip('.json')))
+df_top_transaction = pd.DataFrame(col5)
+
+path6 = r"C:\Users\user\pulse\data\top\user\country\india\state"
+USER_list = os.listdir(path6)
+
+col6 = {'State': [], 'Year': [], 'Quarter': [], 'District': [],
+        'RegisteredUser': []}
+for i in USER_list:
+    p_i = path6 + "/" + i
+    Agg_yr = os.listdir(p_i)
+
+    for j in Agg_yr:
+        p_j = p_i + "/" + j
+        Agg_yr_list = os.listdir(p_j)
+
+        for k in Agg_yr_list:
+            p_k = p_j + "/" + k
+            # print(p_k)
+            Data = open(p_k, 'r')
+            F = json.load(Data)
+            for t in F['data']['pincodes']:
+                Name = t['name']
+                registeredUser = t['registeredUsers']
+                col6['District'].append(Name)
+                col6['RegisteredUser'].append(registeredUser)
+                col6['State'].append(i)
+                col6['Year'].append(j)
+                col6['Quarter'].append(int(k.strip('.json')))
+df_top_user = pd.DataFrame(col6)
+
+mycon = mysql.connector.connect(
+    host = "localhost",
+    user = "root",
+    password="12345",
+    database = "pulse"
+)
+cursor = mycon.cursor()
+
+# CONNECTION WITH SQL SERVER
+from sqlalchemy import create_engine
+
+# Replace 'root', '12345', 'pulse', and 'localhost' with your actual MySQL credentials
+connection_string = "mysql+pymysql://root:12345@localhost:3306/pulse"
+
+# Creating a SQLAlchemy engine
+engine = create_engine(connection_string)
+
+# Assuming df_aggregated_transaction, df_aggregated_user, etc., are your DataFrames
+df_aggregated_transaction.to_sql('aggregated_transaction', con=engine, if_exists='replace', index=False)
+df_aggregated_user.to_sql('aggregated_user', con=engine, if_exists='replace', index=False)
+df_map_transaction.to_sql('map_transaction', con=engine, if_exists='replace', index=False)
+df_map_user.to_sql('map_user', con=engine, if_exists='replace', index=False)
+df_top_transaction.to_sql('top_transaction', con=engine, if_exists='replace', index=False)
+df_top_user.to_sql('top_user', con=engine, if_exists='replace', index=False)
+
+#STREAMLIT
+
+st.set_page_config(page_title= "Phonepe pulse | By Parikshit N H",
+                   layout= "wide",
+                   initial_sidebar_state= "expanded",
+                   menu_items={'About': """# This app is created by *Parikshit N H!*"""})
+
+with st.sidebar:
+    SELECT = option_menu(None, ["About","Search","Home","Basic insights","Contact"],
+                           icons=["bar-chart","search","house","toggles","at"],
+                           default_index=0,
+                           orientation="vertical",
+                           styles={"nav-link": {"font-size": "30px", "text-align": "centre", "margin": "0px",
+                                                "--hover-color": "#fee9be"},
+                                   "icon": {"font-size": "30px"},
+                                   "container" : {"max-width": "6000px"},
+                                   "nav-link-selected": {"background-color": "#C80101"}})
+
+
+if SELECT == "Basic insights":
+    st.title("BASIC INSIGHTS")
+    st.write("----")
+    st.subheader("Let's know some basic insights about the data")
+    options = ["--select--","Top 10 states based on year and amount of transaction","Least 10 states based on type and amount of transaction",
+               "Top 10 mobile brands based on percentage of transaction","Top 10 Registered-users based on States and District(pincode)",
+               "Top 10 Districts based on states and amount of transaction","Least 10 Districts based on states and amount of transaction",
+               "Least 10 registered-users based on Districts and states","Top 10 transactions_type based on states and transaction_amount"]
+    select = st.selectbox("Select the option",options)
+    if select=="Top 10 states based on year and amount of transaction":
+        cursor.execute("SELECT State, MAX(Transaction_amount) AS Max_Transaction_amount, Year, Quarter  FROM top_transaction  GROUP BY State, Year, Quarter  ORDER BY Max_Transaction_amount DESC  LIMIT 10;");
+        df = pd.DataFrame(cursor.fetchall(),columns=['State','Transaction_amount','Year','Quarter'])
+        col1,col2 = st.columns(2)
+        with col1:
+            st.write(df)
+        with col2:
+            st.title("Top 10 states based on type and amount of transaction")
+            st.bar_chart(data=df,x="State",y="Transaction_amount")
+    elif select=="Least 10 states based on type and amount of transaction":
+        cursor.execute("FROM top_transaction  GROUP BY State, Transaction_amount, Year, Quarter ORDER BY Transaction_amount ASC  LIMIT 10;");
+        df = pd.DataFrame(cursor.fetchall(),columns=['State','Transaction_amount','Year','Quater'])
+        col1,col2 = st.columns(2)
+        with col1:
+            st.write(df)
+        with col2:
+            st.title("Least 10 states based on type and amount of transaction")
+            st.bar_chart(data=df,x="State",y="Transaction_amount")
+    elif select=="Top 10 mobile brands based on percentage of transaction":
+        cursor.execute("SELECT brands, MAX(Percentage) AS MaxPercentage FROM aggregated_user GROUP BY brands ORDER BY MaxPercentage DESC LIMIT 10;");
+        df = pd.DataFrame(cursor.fetchall(),columns=['brands','Percentage'])
+        col1,col2 = st.columns(2)
+        with col1:
+            st.write(df)
+        with col2:
+            st.title("Top 10 mobile brands based on percentage of transaction")
+            st.bar_chart(data=df,x="brands",y="Percentage")
+    elif select=="Top 10 Registered-users based on States and District(pincode)":
+        cursor.execute("SELECT State, District, MAX(RegisteredUser) AS MaxRegisteredUser FROM top_user GROUP BY State, District ORDER BY MaxRegisteredUser DESC LIMIT 10;");
+        df = pd.DataFrame(cursor.fetchall(),columns=['State','District','RegisteredUser'])
+        col1,col2 = st.columns(2)
+        with col1:
+            st.write(df)
+        with col2:
+            st.title("Top 10 Registered-users based on States and District(pincode)")
+            st.bar_chart(data=df,x="State",y="RegisteredUser")
+    elif select=="Top 10 Districts based on states and amount of transaction":
+        cursor.execute("SELECT State, District, MAX(amount) AS Amount FROM map_transaction GROUP BY State, District ORDER BY Amount DESC LIMIT 10;");
+        df = pd.DataFrame(cursor.fetchall(),columns=['State','District','Transaction_amount'])
+        col1,col2 = st.columns(2)
+        with col1:
+            st.write(df)
+        with col2:
+            st.title("Top 10 Districts based on states and amount of transaction")
+            st.bar_chart(data=df,x="State",y="Transaction_amount")
+    elif select=="Least 10 Districts based on states and amount of transaction":
+        cursor.execute("SELECT  State,District,amount FROM map_transaction GROUP BY State,District,amount ORDER BY amount ASC LIMIT 10");
+        df = pd.DataFrame(cursor.fetchall(),columns=['State','District','Transaction_amount'])
+        col1,col2 = st.columns(2)
+        with col1:
+            st.write(df)
+        with col2:
+            st.title("Least 10 Districts based on states and amount of transaction")
+            st.bar_chart(data=df,x="State",y="Transaction_amount")
+    elif select=="Least 10 registered-users based on Districts and states":
+        cursor.execute("SELECT State, District, RegisteredUser FROM top_user  GROUP BY State, District, RegisteredUser ORDER BY RegisteredUser ASC  LIMIT 10;");
+        df = pd.DataFrame(cursor.fetchall(),columns=['State','District','RegisteredUser'])
+        col1,col2 = st.columns(2)
+        with col1:
+            st.write(df)
+        with col2:
+            st.title("Least 10 registered-users based on Districts and states")
+            st.bar_chart(data=df,x="State",y="RegisteredUser")
+    elif select=="Top 10 transactions_type based on states and transaction_amount":
+        cursor.execute("SELECT State, Transaction_type, Transaction_amount FROM aggregated_transaction  GROUP BY State, Transaction_type, Transaction_amount ORDER BY Transaction_amount DESC  LIMIT 10;");
+        df = pd.DataFrame(cursor.fetchall(),columns=['State','Transaction_type','Transaction_amount'])
+        col1,col2 = st.columns(2)
+        with col1:
+            st.write(df)
+        with col2:
+            st.title("Top 10 transactions_type based on states and transaction_amount")
+            st.bar_chart(data=df,x="State",y="Transaction_amount")
+
+if SELECT == "Home":
+
+    from streamlit_extras.add_vertical_space import add_vertical_space
+
+    if SELECT == "Home":
+        col1, col2, = st.columns(2)
+        col1.image(Image.open("C:/Users/user/Downloads/download.JPG"), width=500)
+        with col1:
+            st.subheader(
+                "PhonePe  is an Indian digital payments and financial technology company headquartered in Bengaluru, Karnataka, India. PhonePe was founded in December 2015, by Sameer Nigam, Rahul Chari and Burzin Engineer. The PhonePe app, based on the Unified Payments Interface (UPI), went live in August 2016. It is owned by Flipkart, a subsidiary of Walmart.")
+            st.download_button("DOWNLOAD THE APP NOW", "https://www.phonepe.com/app-download/")
+
+
+
+        with col2:
+            col2.image(Image.open("C:/Users/user/Downloads/pp.JPG"), width=500)
+
+            st.video("https://www.youtube.com/watch?v=qL2lT5AWKko&list=PPSV")
+
+            st.subheader(':blue[Registered Users Hotspots - States]')
+
+            df_aggregated_transaction = pd.read_csv(r'C:/Users/user/Downloads/aggregated_transaction.csv')
+            df_aggregated_user = pd.read_csv(r'C:/Users/user/Downloads/aggregated_user.csv')
+        with open(r'C:/Users/user/Downloads/latlong.csv', 'rb') as file:
+            result = chardet.detect(file.read())
+
+        # Use the detected encoding to read the CSV file
+        encoding = result['encoding']
+        Scatter_Geo_Dataset = pd.read_csv(r'C:/Users/user/Downloads/Data_Map_Districts_Longitude_Latitude.csv', encoding=encoding)
+        Coropleth_Dataset = pd.read_csv(r'C:/Users/user/Downloads/Data_Map_IndiaStates_TU.csv')
+        Data_Map_Transaction_df = pd.read_csv(r'C:/Users/user/Downloads/Data_Map_Transaction_Table.csv')
+        df_map_user = pd.read_csv(r'C:/Users/user/Downloads/map_user.csv')
+        Indian_States = pd.read_csv(r'C:/Users/user/Downloads/Longitude_Latitude_State_Table.csv',encoding=encoding)
+
+        c1, c2 = st.columns(2)
+        with c1:
+            Year = st.selectbox(
+                'Please select the Year',
+                ('2018', '2019', '2020', '2021', '2022', '2023'))
+        with c2:
+            Quarter = st.selectbox(
+                'Please select the Quarter',
+                ('1', '2', '3', '4'))
+        year = int(Year)
+        quarter = int(Quarter)
+
+        Transaction_scatter_districts = Data_Map_Transaction_df.loc[
+            (Data_Map_Transaction_df['Year'] == year) & (Data_Map_Transaction_df['Quarter'] == quarter)].copy()
+        Transaction_Coropleth_States = Transaction_scatter_districts[Transaction_scatter_districts["State"] == "india"]
+        Transaction_scatter_districts.drop(
+            Transaction_scatter_districts.index[(Transaction_scatter_districts["State"] == "india")], axis=0,
+            inplace=True)
+        # Dynamic Scattergeo Data Generation
+
+        Transaction_scatter_districts = Transaction_scatter_districts.sort_values(by=['Place_Name'], ascending=False)
+        Scatter_Geo_Dataset = Scatter_Geo_Dataset.sort_values(by=['District'], ascending=False)
+        Total_Amount = []
+        for i in Transaction_scatter_districts['Total_Amount']:
+            Total_Amount.append(i)
+        Scatter_Geo_Dataset['Total_Amount'] = Total_Amount
+        Total_Transaction = []
+        for i in Transaction_scatter_districts['Total_Transactions_count']:
+            Total_Transaction.append(i)
+        Scatter_Geo_Dataset['Total_Transactions'] = Total_Transaction
+        Scatter_Geo_Dataset['Year_Quarter'] = str(year) + '-Q' + str(quarter)
+        # Dynamic Coropleth
+
+        Coropleth_Dataset = Coropleth_Dataset.sort_values(by=['state'], ascending=False)
+        Transaction_Coropleth_States = Transaction_Coropleth_States.sort_values(by=['Place_Name'], ascending=False)
+        Total_Amount = []
+        for i in Transaction_Coropleth_States['Total_Amount']:
+            Total_Amount.append(i)
+        Coropleth_Dataset['Total_Amount'] = Total_Amount
+        Total_Transaction = []
+        for i in Transaction_Coropleth_States['Total_Transactions_count']:
+            Total_Transaction.append(i)
+        Coropleth_Dataset['Total_Transactions'] = Total_Transaction
+
+        # scatter plotting the states codes
+        Indian_States = Indian_States.sort_values(by=['state'], ascending=False)
+        Indian_States['Registered_Users'] = Coropleth_Dataset['Registered_Users']
+        Indian_States['Total_Amount'] = Coropleth_Dataset['Total_Amount']
+        Indian_States['Total_Transactions'] = Coropleth_Dataset['Total_Transactions']
+        Indian_States['Year_Quarter'] = str(year) + '-Q' + str(quarter)
+        fig = px.scatter_geo(Indian_States,
+                             lon=Indian_States['Longitude'],
+                             lat=Indian_States['Latitude'],
+                             #text=Indian_States['code'],  # It will display district names on map
+                             hover_name="state",
+                             hover_data=['Total_Amount', "Total_Transactions", "Year_Quarter"],
+                             )
+        fig.update_traces(marker=dict(color="white", size=0.3))
+        fig.update_geos(fitbounds="locations", visible=False, )
+        # scatter plotting districts
+        Scatter_Geo_Dataset['col'] = Scatter_Geo_Dataset['Total_Transactions']
+        fig1 = px.scatter_geo(Scatter_Geo_Dataset,
+                              lon=Scatter_Geo_Dataset['Longitude'],
+                              lat=Scatter_Geo_Dataset['Latitude'],
+                              color=Scatter_Geo_Dataset['col'],
+                              size=Scatter_Geo_Dataset['Total_Transactions'],
+                              #text = Scatter_Geo_Dataset['District'], #It will display district names on map
+                              hover_name="District",
+                              hover_data=["State", "Total_Amount", "Total_Transactions", "Year_Quarter"],
+                              title='District',
+                              size_max=22)
+
+        fig1.update_traces(marker=dict(color="rebeccapurple", line_width=1))  # rebeccapurple
+        # coropleth mapping india
+        fig_ch = px.choropleth(
+            Coropleth_Dataset,
+            geojson="https://gist.githubusercontent.com/jbrobst/56c13bbbf9d97d187fea01ca62ea5112/raw/e388c4cae20aa53cb5090210a42ebb9b765c0a36/india_states.geojson",
+            featureidkey='properties.ST_NM',
+            locations='state',
+            color="Total_Transactions",
+        )
+        fig_ch.update_geos(fitbounds="locations", visible=False, )
+        # combining districts states and coropleth
+        fig_ch.add_trace(fig.data[0])
+        fig_ch.add_trace(fig1.data[0])
+        st.write("### **:blue[PhonePe India Map]**")
+        colT1, colT2 = st.columns([6, 4])
+        with colT1:
+            st.plotly_chart(fig_ch, use_container_width=True)
+        with colT2:
+            st.info(
+                """
+                Details of Map:
+                - The darkness of the state color represents the total transactions
+                - The Size of the Circles represents the total transactions dictrict wise
+                - The bigger the Circle the higher the transactions
+                - Hover data will show the details like Total transactions, Total amount
+                """
+            )
+            st.info(
+                """
+                Important Observations:
+                - User can observe Transactions of PhonePe in both statewide and Districtwide.
+                - We can clearly see the states with highest transactions in the given year and quarter
+                - We get basic idea about transactions district wide
+                """
+            )
+
+if SELECT == "About":
+    col1 = st.columns(1)[0]  # Use indexing to access the first (and only) column
+
+    # Display the image
+    col1.image(Image.open("C:/Users/user/Downloads/download1.JPG"), width=900)
+
+    # Display text in the same column
+    with col1:
+        st.title("THE BEAT OF PHONEPE")
+        st.write("---")
+
+        st.subheader("The Indian digital payments story has truly captured the world's imagination."
+                     " From the largest towns to the remotest villages, there is a payments revolution being driven by the penetration of mobile phones, mobile internet and state-of-the-art payments infrastructure built as Public Goods championed by the central bank and the government."
+                     " Founded in December 2015, PhonePe has been a strong beneficiary of the API driven digitisation of payments in India. When we started, we were constantly looking for granular and definitive data sources on digital payments in India. "
+                     "PhonePe Pulse is our way of giving back to the digital payments ecosystem.")
+
+if SELECT == "Contact":
+    col1 = st.columns(1)[0]
+    col1.image(Image.open("C:/Users/user/Downloads/p.JPG"), width=900)
+
+    with col1:
+        col1.image(Image.open("C:/Users/user/Downloads/contact.JPG"), width=300)
+        st.write("Parikshit N H.")
+        st.write("pnhurukadli@gmail.com.")
+        st.write("An Aspiring DATA-SCIENTIST..!")
+        st.write("www.linkedin.com/in/parikshit-hurukadli-537419226.")
+
+
+if SELECT =="Search":
+    Topic = ["","Transaction-Type","District","Brand","Top-Transactions","Registered-users"]
+    choice_topic = st.selectbox("Search by",Topic)
+
+    #creating functions for query search in sql get the data
+    def get_transaction_data(transaction_type):
+        cursor.execute(
+            f"SELECT State, Quarter, Year, Transaction_type, Transaction_amount FROM aggregated_transaction WHERE Transaction_type = '{transaction_type}' ORDER BY State, Quarter, Year")
+        df = pd.DataFrame(cursor.fetchall(),
+                          columns=['State', 'Quarter', 'Year', 'Transaction_type', 'Transaction_amount'])
+        return df
+
+
+    def type_year(year, transaction_type):
+        query = f"SELECT State, Year, Quarter, Transaction_type, Transaction_amount FROM aggregated_transaction WHERE Year = %s AND Transaction_type = %s ORDER BY State, Quarter, Year"
+        cursor.execute(query, (year, transaction_type))
+        df = pd.DataFrame(cursor.fetchall(),
+                          columns=['State', 'Year', 'Quarter', 'Transaction_type', 'Transaction_amount'])
+        return df
+
+
+    def type_state(state, year, transaction_type):
+        query = f"SELECT State, Year, Quarter, Transaction_type, Transaction_amount FROM aggregated_transaction WHERE State = %s AND Transaction_type = %s AND Year = %s ORDER BY State, Quarter, Year"
+        cursor.execute(query, (state, transaction_type, year))
+        df = pd.DataFrame(cursor.fetchall(),
+                          columns=['State', 'Year', 'Quarter', 'Transaction_type', 'Transaction_amount'])
+        return df
+
+
+    def district_choice_state(_state):
+        query = f"SELECT State, Year, Quarter, District, amount FROM map_transaction WHERE State = %s ORDER BY State, Year, Quarter, District"
+        cursor.execute(query, (_state,))
+        df = pd.DataFrame(cursor.fetchall(), columns=['State', 'Year', 'Quarter', 'District', 'amount'])
+        return df
+
+
+    def dist_year_state(year, _state):
+        query = f"SELECT State, Year, Quarter, District, amount FROM map_transaction WHERE Year = %s AND State = %s ORDER BY State, Year, Quarter, District"
+        cursor.execute(query, (year, _state))
+        df = pd.DataFrame(cursor.fetchall(), columns=['State', 'Year', 'Quarter', 'District', 'amount'])
+        return df
+
+
+    def district_year_state(_dist, year, _state):
+        query = f"SELECT State, Year, Quarter, District, amount FROM map_transaction WHERE District = %s AND State = %s AND Year = %s ORDER BY State, Year, Quarter, District"
+        cursor.execute(query, (_dist, _state, year))
+        df = pd.DataFrame(cursor.fetchall(), columns=['State', 'Year', 'Quarter', 'District', 'amount'])
+        return df
+
+
+    def brand_(brand_type):
+        query = f"SELECT State, Year, Quarter, brands, Percentage FROM aggregated_user WHERE brands = %s ORDER BY State, Year, Quarter, brands, Percentage DESC"
+        cursor.execute(query, (brand_type,))
+        df = pd.DataFrame(cursor.fetchall(), columns=['State', 'Year', 'Quarter', 'brands', 'Percentage'])
+        return df
+
+
+    def brand_year(brand_type, year):
+        query = f"SELECT State, Year, Quarter, brands, Percentage FROM aggregated_user WHERE Year = %s AND brands = %s ORDER BY State, Year, Quarter, brands, Percentage DESC"
+        cursor.execute(query, (year, brand_type))
+        df = pd.DataFrame(cursor.fetchall(), columns=['State', 'Year', 'Quarter', 'brands', 'Percentage'])
+        return df
+
+
+    def brand_state(state, brand_type, year):
+        query = "SELECT State, Year, Quarter, brands, Percentage FROM aggregated_user WHERE State = %s AND brands = %s AND Year = %s ORDER BY State, Year, Quarter, brands, Percentage DESC"
+        cursor.execute(query, (state, brand_type, year))
+        df = pd.DataFrame(cursor.fetchall(), columns=['State', 'Year', 'Quarter', 'brands', 'Percentage'])
+        return df
+
+
+    def transaction_state(_state):
+        query = "SELECT State, Year, Quarter, District, Transaction_count, Transaction_amount FROM top_transaction WHERE State = %s GROUP BY State, Year, Quarter"
+        cursor.execute(query, (_state,))
+        df = pd.DataFrame(cursor.fetchall(),
+                          columns=['State', 'Year', 'Quarter', 'District', 'Transaction_count', 'Transaction_amount'])
+        return df
+
+
+    def transaction_year(_state, _year):
+        query = "SELECT State, Year, Quarter, District, Transaction_count, Transaction_amount FROM top_transaction WHERE Year = %s AND State = %s GROUP BY State, Year, Quarter"
+        cursor.execute(query, (_year, _state))
+        df = pd.DataFrame(cursor.fetchall(),
+                          columns=['State', 'Year', 'Quarter', 'District', 'Transaction_count', 'Transaction_amount'])
+        return df
+
+
+    def transaction_quarter(_state, _year, _quarter):
+        query = "SELECT State, Year, Quarter, District, Transaction_count, Transaction_amount FROM top_transaction WHERE Year = %s AND Quarter = %s AND State = %s GROUP BY State, Year, Quarter"
+        cursor.execute(query, (_year, _quarter, _state))
+        df = pd.DataFrame(cursor.fetchall(),
+                          columns=['State', 'Year', 'Quarter', 'District', 'Transaction_count', 'Transaction_amount'])
+        return df
+
+
+    def registered_user_state(_state):
+        query = "SELECT State, Year, Quarter, District, RegisteredUser FROM map_user WHERE State = %s ORDER BY State, Year, Quarter, District"
+        cursor.execute(query, (_state,))
+        df = pd.DataFrame(cursor.fetchall(), columns=['State', 'Year', 'Quarter', 'District', 'RegisteredUser'])
+        return df
+
+
+    def registered_user_year(_state, _year):
+        query = "SELECT State, Year, Quarter, District, RegisteredUser FROM map_user WHERE Year = %s AND State = %s ORDER BY State, Year, Quarter, District"
+        cursor.execute(query, (_year, _state))
+        df = pd.DataFrame(cursor.fetchall(), columns=['State', 'Year', 'Quarter', 'District', 'RegisteredUser'])
+        return df
+
+
+    def registered_user_district(_state, _year, _dist):
+        query = "SELECT State, Year, Quarter, District, RegisteredUser FROM map_user WHERE Year = %s AND State = %s AND District = %s ORDER BY State, Year, Quarter, District"
+        cursor.execute(query, (_year, _state, _dist))
+        df = pd.DataFrame(cursor.fetchall(), columns=['State', 'Year', 'Quarter', 'District', 'RegisteredUser'])
+        return df
+
+
+    if choice_topic=="Transaction-Type":
+        col1,col2,col3 = st.columns(3)
+        with col1:
+            st.subheader("-- 5 TYPES OF TRANSACTION --")
+            transaction_type = st.selectbox("search by", ["Choose an option", "Peer-to-peer payments",
+                                                          "Merchant payments", "Financial Services",
+                                                          "Recharge & bill payments", "Others"], 0)
+        with col2:
+            st.subheader("-- 5 YEARS --")
+            choice_year = st.selectbox("Year", ["", "2018", "2019", "2020", "2021", "2022"], 0)
+        with col3:
+            st.subheader("-- 36 STATES --")
+            menu_state = ["", 'uttar-pradesh', 'jharkhand', 'puducherry', 'rajasthan', 'odisha', 'nagaland',
+                          'chandigarh', 'dadra-&-nagar-haveli-&-daman-&-diu', 'assam', 'haryana', 'jammu-&-kashmir',
+                          'tamil-nadu', 'himachal-pradesh', 'ladakh', 'bihar', 'maharashtra', 'uttarakhand',
+                          'karnataka', 'lakshadweep', 'andhra-pradesh', 'sikkim', 'madhya-pradesh', 'mizoram',
+                          'kerala', 'manipur', 'arunachal-pradesh', 'andaman-&-nicobar-islands', 'delhi', 'tripura',
+                          'chhattisgarh', 'meghalaya', 'goa', 'west-bengal', 'telangana', 'gujarat', 'punjab']
+            choice_state = st.selectbox("State", menu_state, 0)
+
+        if transaction_type:
+            col1,col2,col3, = st.columns(3)
+            with col1:
+                st.subheader(f'{transaction_type}')
+                st.write(type(transaction_type))
+        if transaction_type and choice_year:
+            with col2:
+                st.subheader(f' in {choice_year}')
+                st.write(type_year(choice_year,transaction_type))
+        if transaction_type and choice_state and choice_year:
+            with col3:
+                st.subheader(f' in {choice_state}')
+                st.write(type_state(choice_state,choice_year,transaction_type))
+
+    if choice_topic=="District":
+        col1,col2,col3 = st.columns(3)
+        with col1:
+            st.subheader("-- 36 STATES --")
+            menu_state = ["", 'uttar-pradesh', 'jharkhand', 'puducherry', 'rajasthan', 'odisha', 'nagaland',
+                          'chandigarh', 'dadra-&-nagar-haveli-&-daman-&-diu', 'assam', 'haryana', 'jammu-&-kashmir',
+                          'tamil-nadu', 'himachal-pradesh', 'ladakh', 'bihar', 'maharashtra', 'uttarakhand',
+                          'karnataka', 'lakshadweep', 'andhra-pradesh', 'sikkim', 'madhya-pradesh', 'mizoram',
+                          'kerala', 'manipur', 'arunachal-pradesh', 'andaman-&-nicobar-islands', 'delhi', 'tripura',
+                          'chhattisgarh', 'meghalaya', 'goa', 'west-bengal', 'telangana', 'gujarat', 'punjab']
+            choice_state = st.selectbox("State", menu_state, 0)
+        with col2:
+            st.subheader("-- 5 YEARS --")
+            choice_year = st.selectbox("Year", ["", "2018", "2019", "2020", "2021", "2022"], 0)
+        with col3:
+            st.subheader("-- SELECT DISTRICTS --")
+            district = st.selectbox("search by", df_map_transaction["District"].unique().tolist())
+        if choice_state:
+            col1,col2,col3 = st.columns(3)
+            with col1:
+                st.subheader(f'{choice_state}')
+                st.write(district_choice_state(choice_state))
+        if choice_year and choice_state:
+            with col2:
+                st.subheader(f'in {choice_year} ')
+                st.write(dist_year_state(choice_year,choice_state))
+        if district and choice_state and choice_year:
+            with col3:
+                st.subheader(f'in {district} ')
+                st.write(district_year_state(district,choice_year,choice_state))
+
+    if choice_topic=="Brand":
+        col1,col2,col3 = st.columns(3)
+        with col1:
+            st.subheader("-- TYPES OF BRANDS --")
+            mobiles = ["",'Xiaomi', 'Vivo', 'Samsung', 'Oppo', 'Realme', 'Apple', 'Huawei', 'Motorola', 'Tecno', 'Infinix',
+                       'Lenovo', 'Lava', 'OnePlus', 'Micromax', 'Asus', 'Gionee', 'HMD Global', 'COOLPAD', 'Lyf',
+                       'Others']
+            brand_type = st.selectbox("search by",mobiles, 0)
+        with col2:
+            st.subheader("-- 5 YEARS --")
+            choice_year = st.selectbox("Year", ["", "2018", "2019", "2020", "2021", "2022"], 0)
+        with col3:
+            st.subheader("-- 36 STATES --")
+            menu_state = ["", 'uttar-pradesh', 'jharkhand', 'puducherry', 'rajasthan', 'odisha', 'nagaland',
+                          'chandigarh', 'dadra-&-nagar-haveli-&-daman-&-diu', 'assam', 'haryana', 'jammu-&-kashmir',
+                          'tamil-nadu', 'himachal-pradesh', 'ladakh', 'bihar', 'maharashtra', 'uttarakhand',
+                          'karnataka', 'lakshadweep', 'andhra-pradesh', 'sikkim', 'madhya-pradesh', 'mizoram',
+                          'kerala', 'manipur', 'arunachal-pradesh', 'andaman-&-nicobar-islands', 'delhi', 'tripura',
+                          'chhattisgarh', 'meghalaya', 'goa', 'west-bengal', 'telangana', 'gujarat', 'punjab']
+            choice_state = st.selectbox("State", menu_state, 0)
+
+        if brand_type:
+            col1,col2,col3, = st.columns(3)
+            with col1:
+                st.subheader(f'{brand_type}')
+                st.write(brand_(brand_type))
+        if brand_type and choice_year:
+            with col2:
+                st.subheader(f' in {choice_year}')
+                st.write(brand_year(brand_type,choice_year))
+        if brand_type and choice_state and choice_year:
+            with col3:
+                st.subheader(f' in {choice_state}')
+                st.write(brand_state(choice_state,brand_type,choice_year))
+
+    if choice_topic=="Top-Transactions":
+        col1,col2,col3 = st.columns(3)
+        with col1:
+            st.subheader("-- 36 STATES --")
+            menu_state = ["", 'uttar-pradesh', 'jharkhand', 'puducherry', 'rajasthan', 'odisha', 'nagaland',
+                          'chandigarh', 'dadra-&-nagar-haveli-&-daman-&-diu', 'assam', 'haryana', 'jammu-&-kashmir',
+                          'tamil-nadu', 'himachal-pradesh', 'ladakh', 'bihar', 'maharashtra', 'uttarakhand',
+                          'karnataka', 'lakshadweep', 'andhra-pradesh', 'sikkim', 'madhya-pradesh', 'mizoram',
+                          'kerala', 'manipur', 'arunachal-pradesh', 'andaman-&-nicobar-islands', 'delhi', 'tripura',
+                          'chhattisgarh', 'meghalaya', 'goa', 'west-bengal', 'telangana', 'gujarat', 'punjab']
+            choice_state = st.selectbox("State", menu_state, 0)
+        with col2:
+            st.subheader("-- 5 YEARS --")
+            choice_year = st.selectbox("Year", ["", "2018", "2019", "2020", "2021", "2022"], 0)
+        with col3:
+            st.subheader("--4 Quarters --")
+            menu_quarter = ["", "1", "2", "3", "4"]
+            choice_quarter = st.selectbox("Quarter", menu_quarter, 0)
+
+        if choice_state:
+            with col1:
+                st.subheader(f'{choice_state}')
+                st.write(transaction_state(choice_state))
+        if choice_state and choice_year:
+            with col2:
+                st.subheader(f'{choice_year}')
+                st.write(transaction_year(choice_state,choice_year))
+        if choice_state and choice_quarter:
+            with col3:
+                st.subheader(f'{choice_quarter}')
+                st.write(transaction_quarter(choice_state,choice_year,choice_quarter))
+
+    if choice_topic=="Registered-users":
+        col1,col2,col3 = st.columns(3)
+        with col1:
+            st.subheader("-- 36 STATES --")
+            menu_state = ["", 'uttar-pradesh', 'jharkhand', 'puducherry', 'rajasthan', 'odisha', 'nagaland',
+                          'chandigarh', 'dadra-&-nagar-haveli-&-daman-&-diu', 'assam', 'haryana', 'jammu-&-kashmir',
+                          'tamil-nadu', 'himachal-pradesh', 'ladakh', 'bihar', 'maharashtra', 'uttarakhand',
+                          'karnataka', 'lakshadweep', 'andhra-pradesh', 'sikkim', 'madhya-pradesh', 'mizoram',
+                          'kerala', 'manipur', 'arunachal-pradesh', 'andaman-&-nicobar-islands', 'delhi', 'tripura',
+                          'chhattisgarh', 'meghalaya', 'goa', 'west-bengal', 'telangana', 'gujarat', 'punjab']
+            choice_state = st.selectbox("State", menu_state, 0)
+        with col2:
+            st.subheader("-- 5 YEARS --")
+            choice_year = st.selectbox("Year", ["", "2018", "2019", "2020", "2021", "2022"], 0)
+        with col3:
+            st.subheader("-- SELECT DISTRICTS --")
+            district = st.selectbox("search by", df_map_transaction["District"].unique().tolist())
+
+        if choice_state:
+            with col1:
+                st.subheader(f'{choice_state}')
+                st.write(registered_user_state(choice_state))
+        if choice_state and choice_year:
+            with col2:
+                st.subheader(f'{choice_year}')
+                st.write(registered_user_year(choice_state,choice_year))
+        if choice_state and choice_year and district:
+            with col3:
+                st.subheader(f'{district}')
+                st.write(registered_user_district(choice_state,choice_year,district))
+
